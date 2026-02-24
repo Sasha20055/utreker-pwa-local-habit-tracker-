@@ -1,0 +1,14 @@
+node_modules/
+
+# Local agent/tooling state
+.agent/
+.agents/
+.claude/
+
+# Build artifacts
+dist/
+.dist/
+
+# Python caches from local scripts
+__pycache__/
+*.pyc
