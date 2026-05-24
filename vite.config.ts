@@ -13,14 +13,16 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        includeAssets: ['icon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'og-image.svg', 'robots.txt', 'sitemap.xml'],
         manifest: {
           id: base,
           start_url: base,
           scope: base,
-          name: 'utreker',
+          name: 'utreker — трекер привычек и настроения',
           short_name: 'utreker',
-          description: 'Habit tracker with insights',
+          description: 'Бесплатный трекер привычек, настроения и энергии с аналитикой. Работает офлайн, без регистрации.',
+          lang: 'ru',
+          categories: ['productivity', 'lifestyle', 'health'],
           theme_color: '#0a0a0f',
           background_color: '#0a0a0f',
           display: 'standalone',
@@ -46,6 +48,15 @@ export default defineConfig(() => {
               src: 'icon.svg',
               sizes: 'any',
               type: 'image/svg+xml'
+            }
+          ],
+          screenshots: [
+            {
+              src: 'og-image.svg',
+              sizes: '1200x630',
+              type: 'image/svg+xml',
+              form_factor: 'wide',
+              label: 'utreker — трекер привычек и настроения'
             }
           ]
         },

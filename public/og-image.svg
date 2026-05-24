@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="checkGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#8b5cf6" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.05"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="20" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0a0f"/>
+  
+  <!-- Subtle background glow -->
+  <ellipse cx="400" cy="315" rx="350" ry="250" fill="url(#glowGrad)" filter="url(#softGlow)"/>
+  
+  <!-- Icon background -->
+  <rect x="80" y="175" width="280" height="280" rx="40" fill="#12121a"/>
+  
+  <!-- Checkmark icon -->
+  <path d="M165 335 L215 385 L325 275" stroke="url(#checkGrad)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#glow)"/>
+  
+  <!-- App name -->
+  <text x="430" y="295" font-family="Inter, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#ffffff" letter-spacing="-1">utreker</text>
+  
+  <!-- Tagline -->
+  <text x="430" y="355" font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#a1a1aa">Трекер привычек и настроения</text>
+  
+  <!-- Features line -->
+  <text x="430" y="405" font-family="Inter, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#52525b">Привычки · Настроение · Энергия · Аналитика</text>
+  
+  <!-- URL -->
+  <text x="430" y="460" font-family="Inter, -apple-system, sans-serif" font-size="22" font-weight="500" fill="#06b6d4">utreker.com</text>
+  
+  <!-- Bottom gradient line -->
+  <rect x="0" y="615" width="1200" height="15" fill="url(#checkGrad)"/>
+</svg>

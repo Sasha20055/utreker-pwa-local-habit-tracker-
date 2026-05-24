@@ -5,6 +5,7 @@ import { useHabits } from '@/hooks';
 import { getEntriesForAnalytics } from '@/lib/db';
 import { generateInsights } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+import { usePageTitle } from '@/hooks';
 import type { Insight, TrendInsight, CorrelationInsight, ComparisonInsight, TextInsight } from '@/types';
 
 // Insight card components
@@ -130,6 +131,7 @@ function TextCard({ insight }: { insight: TextInsight }) {
 }
 
 export function Insights() {
+  usePageTitle('Инсайты — что влияет на ваше самочувствие');
   const { habits } = useHabits();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [isLoading, setIsLoading] = useState(true);

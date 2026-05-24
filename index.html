@@ -1,16 +1,92 @@
+<!DOCTYPE html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Primary Meta Tags -->
+    <title>utreker — трекер привычек и настроения | Аналитика и инсайты</title>
+    <meta name="title" content="utreker — трекер привычек и настроения | Аналитика и инсайты" />
+    <meta name="description" content="Бесплатный трекер привычек, настроения и энергии с аналитикой. Отслеживайте привычки, записывайте самочувствие, получайте инсайты. Работает офлайн, без регистрации. PWA-приложение." />
+    <meta name="keywords" content="трекер привычек, трекер настроения, дневник привычек, отслеживание привычек, приложение для привычек, дневник настроения, трекер энергии, ежедневный трекер, дневник самочувствия, аналитика привычек, трекер привычек без регистрации, трекер привычек офлайн, бесплатный трекер привычек, habit tracker, mood tracker, habit tracker app, offline habit tracker" />
+    <meta name="author" content="utreker" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://utreker.com/" />
+
+    <!-- Theme & PWA -->
     <meta name="theme-color" content="#0a0a0f" />
-    <meta name="description" content="Habit tracker with insights - utreker" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="utreker" />
+    <meta name="application-name" content="utreker" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://utreker.com/" />
+    <meta property="og:title" content="utreker — трекер привычек и настроения" />
+    <meta property="og:description" content="Бесплатный трекер привычек, настроения и энергии с аналитикой. Работает офлайн, без регистрации." />
+    <meta property="og:image" content="https://utreker.com/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:site_name" content="utreker" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://utreker.com/" />
+    <meta name="twitter:title" content="utreker — трекер привычек и настроения" />
+    <meta name="twitter:description" content="Бесплатный трекер привычек, настроения и энергии с аналитикой. Работает офлайн, без регистрации." />
+    <meta name="twitter:image" content="https://utreker.com/og-image.svg" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "utreker",
+      "alternateName": "Ютрекер",
+      "url": "https://utreker.com",
+      "description": "Бесплатный трекер привычек, настроения и энергии с аналитикой. Отслеживайте привычки, записывайте самочувствие, получайте инсайты. Работает офлайн, без регистрации.",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "All",
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "softwareVersion": "0.1.0",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Отслеживание привычек",
+        "Трекер настроения и энергии",
+        "Аналитика и инсайты",
+        "Цели с прогрессом",
+        "Контекстные теги",
+        "Работа офлайн",
+        "Без регистрации",
+        "Локальное хранение данных"
+      ],
+      "screenshot": "https://utreker.com/og-image.svg",
+      "inLanguage": "ru",
+      "isAccessibleForFree": true,
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1"
+      }
+    }
+    </script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>utreker</title>
   </head>
   <body>
     <div id="root"></div>

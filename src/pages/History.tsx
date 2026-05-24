@@ -5,6 +5,7 @@ import { db, getMonthEntries, getDayEntries, getDateId } from '@/lib/db';
 import { formatMonthYear, getCalendarDays, isToday, cn } from '@/lib/utils';
 import { isHabitScheduledOnDate } from '@/lib/habitSchedule';
 import { MOOD_EMOJIS, ENERGY_EMOJIS, getHabitCategoryMeta } from '@/types';
+import { usePageTitle } from '@/hooks';
 import type { DayEntry, Habit } from '@/types';
 
 type ComparisonMode = 'week' | 'month';
@@ -228,6 +229,7 @@ function TrendChart({
 }
 
 export function History() {
+  usePageTitle('История — календарь и аналитика привычек');
   const [currentDate, setCurrentDate] = useState(() => normalizeDate(new Date()));
   const [referenceDate, setReferenceDate] = useState(() => normalizeDate(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);

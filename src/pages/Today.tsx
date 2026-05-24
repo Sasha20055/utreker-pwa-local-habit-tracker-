@@ -6,7 +6,7 @@ import {
   HabitCard,
   ContextTagPicker,
 } from '@/components/features';
-import { useDayEntry, useHabits } from '@/hooks';
+import { useDayEntry, useHabits, usePageTitle } from '@/hooks';
 import { formatDate } from '@/lib/utils';
 import { isHabitScheduledOnDate } from '@/lib/habitSchedule';
 import { updateHabit } from '@/lib/db';
@@ -92,6 +92,7 @@ function GoalTrackerCard({
 }
 
 export function Today() {
+  usePageTitle('Сегодня — ежедневный трекер привычек');
   const [selectedDate, setSelectedDate] = useState(() => normalizeDate(new Date()));
   const today = normalizeDate(new Date());
   const isToday = selectedDate.getTime() === today.getTime();

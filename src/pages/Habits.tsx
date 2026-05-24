@@ -5,6 +5,7 @@ import { HabitModal } from '@/components/features/HabitModal';
 import { db, getEntriesForAnalytics } from '@/lib/db';
 import { calculateHabitStats, calculateOverallStats, type HabitStats } from '@/lib/habitStats';
 import { cn } from '@/lib/utils';
+import { usePageTitle } from '@/hooks';
 import type { Habit } from '@/types';
 import { getHabitCategoryMeta } from '@/types';
 
@@ -160,6 +161,7 @@ function GoalCard({
 }
 
 export function Habits() {
+  usePageTitle('Привычки — управление и статистика');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showArchived, setShowArchived] = useState(false);

@@ -1,0 +1,14 @@
+# utreker.com — трекер привычек и настроения
+# https://utreker.com
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://utreker.com/sitemap.xml
+
+# Disallow service worker and build assets from indexing
+Disallow: /assets/
+Disallow: /sw.js
+Disallow: /workbox-*.js
+Disallow: /registerSW.js
