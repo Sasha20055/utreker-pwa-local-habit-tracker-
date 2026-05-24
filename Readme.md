@@ -1,40 +1,153 @@
-### 1. Философия и ключевая концепция
-*   **День как центральная сущность:** В отличие от конкурентов, где привычки и настроение часто разрознены, в **utreker** день объединяет всё: настроение, энергию, привычки, заметки и контекстные теги.
-*   **Смысл вместо цифр:** Главный фокус — не на «страйках» (сериях), а на **инсайтах**. Приложение должно отвечать на вопросы «почему стало хуже?» и «что влияет на мой прогресс?», используя человеческий язык вместо сложных графиков.
-*   **Гибкость (Soft Tracking):** Отказ от «дрессировки» пользователя. Пропуск дня не должен означать провал, а привычки могут быть не только бинарными (да/нет), но и шкалированными.
+# utreker
 
-### 2. Исправление «болей» пользователей конкурентов
-| Проблема конкурентов | Решение в **utreker** |
-| :--- | :--- |
-| **Жесткие серии (streaks)** | Серии опциональны. Внедряется система «минимум / идеально» и учет усилий. |
-| **Базовая статистика без выводов** | Экран **«Инсайты»**: текстовые выводы (например, «Энергия падает после 3 дней без отдыха»). |
-| **Отсутствие контекста** | Теги контекста: «стресс», «болезнь», «поездка». Они объясняют пропуски в аналитике. |
-| **Проблемы с приватностью и платный sync** | **Privacy-first**: данные хранятся локально (IndexedDB). Синхронизация через личное облако пользователя (Google Drive/Dropbox) бесплатна. |
-| **Разрозненность данных** | Единое жизненное полотно: корреляция между сном, настроением и привычками в одном интерфейсе. |
+A local-first habit tracker focused not just on habits, but on the full shape of a day: mood, energy, notes, context, and simple insights.
 
-### 3. Функциональные модули MVP
-1.  **Универсальная модель ввода:**
-    *   Настроение и энергия (шкала 1–5).
-    *   Гибкие привычки (бинарные или шкала 0–5).
-    *   Текстовые заметки и контекстные теги.
-2.  **Умная аналитика:**
-    *   **Тренды:** скользящее среднее для настроения и энергии.
-    *   **Корреляции:** расчет влияния факторов друг на друга (например, связь сна и продуктивности).
-    *   **Сравнение периодов:** «этот месяц vs прошлый».
-3.  **Рефлексия:** Еженедельный обзор с простыми вопросами («Что помогло?», «Что попробовать изменить?») для превращения данных в опыт.
+utreker is not trying to be another streak-only habit app. The core idea is different: treat the day as a complete picture and help people see what actually affects their wellbeing, consistency, and routine.
 
-### 4. Технический стек и архитектура
-*   **Формат:** **PWA (Progressive Web App)** — работает на всех устройствах (iOS, Android, Desktop) оффлайн и устанавливается как приложение.
-*   **Хранение данных:** **Offline-first** с использованием Dexie.js (IndexedDB). Все данные зашифрованы и находятся под полным контролем пользователя.
-*   **Синхронизация:** Опциональная E2E синхронизация через файлы в облаке пользователя (без собственных серверов разработчика).
-*   **Open-source:** Полная прозрачность кода, что повышает доверие продвинутых пользователей.
+## What This Project Is
 
-### 5. Интерфейс (UX/UI)
-*   **Стиль:** Футуристичный минимализм (по типу сайта Elyzia.js).
-*   **Структура (всего 4 экрана):**
-    1.  **Сегодня:** Быстрый чек-лист и ввод текущего состояния.
-    2.  **История:** Календарь и просмотр прошлых дней.
-    3.  **Инсайты:** Текстовые выводы и 1–2 ключевых графика.
-    4.  **Настройки:** Управление привычками и синхронизацией.
+**utreker** is a PWA for habit tracking and daily self-observation that runs locally in the browser and can be installed like an app.
 
-**Резюме:** **utreker** выигрывает у Daylio за счет глубокой аналитики и гибких привычек, у Loop — за счет работы с эмоциями и контекстом, а у Exist — за счет бесплатности, приватности и простоты PWA-формата.
+Instead of the usual “check the box and move on” model, utreker builds each day from several signals:
+
+- mood on a 1-5 scale
+- energy on a 1-5 scale
+- scheduled habits
+- goals with progress tracking
+- context tags like stress, illness, travel, or rest
+- notes about how the day went
+
+Based on that data, the app shows history, period comparisons, basic trends, and text-based insights.
+
+## Key Features
+
+### 1. The day as a single unit
+Most trackers focus either on habits or on mood. In utreker, those pieces live inside the same daily entry: your state, your actions, and your context are captured in one place instead of being split across different flows.
+
+### 2. Not just completion, but context
+A missed day does not explain much on its own. utreker lets you attach context tags and notes so you can understand why a day was weaker than usual: stress, illness, overload, travel, or recovery.
+
+### 3. Insights instead of raw stats
+The project is built to answer “what affects how I feel?” rather than just dumping numbers into charts. The current MVP already includes:
+
+- mood and energy trends
+- period comparisons
+- correlations between habits and daily state
+- text insights based on recent data
+
+### 4. A flexible habit model
+The app supports more than binary habits. You can track:
+
+- yes-or-no habits
+- scale-based habits with targets
+- long-term goals with progress, deadlines, and units
+
+### 5. Local-first by design
+Data is stored locally in IndexedDB via Dexie. That gives the app fast response times, offline support, and full user control without requiring a backend.
+
+## Why utreker Can Be Better Than a Typical Habit Tracker
+
+- It is closer to real life: habits are not separated from mood, energy, and daily events.
+- It is better for reflection: you do not just see numbers, you start noticing patterns.
+- Its philosophy is softer: less “I failed the day,” more “I understand what is happening to me.”
+- It is more private: the current version stores everything locally on the device.
+- It is faster for day-to-day use: one main screen covers the core daily ritual.
+
+## Where It Stands Against Competitors
+
+This is not an attempt to declare one universal winner. Each product has its own strengths. But utreker positions itself like this:
+
+| Product | Main focus | What utreker does differently |
+| --- | --- | --- |
+| **Daylio** | Fast mood tracking and journaling | Combines mood tracking with habits, goals, daily context, and relationship-based analytics |
+| **Loop Habit Tracker** | Habits, streaks, discipline | Adds energy, mood, notes, and an attempt to explain change instead of only recording completion |
+| **Habitica** | Gamification and motivation | Focuses on mindful self-tracking and personal patterns instead of turning the experience into a game |
+| **A typical habit app** | Checkboxes and percentages | Builds a more complete picture of the day and gives users more material for reflection |
+
+In short:
+
+- **Daylio** is closer to a mood journal
+- **Loop** is closer to a strict habit tracker
+- **Habitica** is closer to a gamified productivity tool
+- **utreker** sits between those categories and focuses on the connection between habits and personal state
+
+## What Already Exists in the MVP
+
+- **Today** screen for daily input
+- mood and energy pickers
+- scheduled habits
+- goals with progress tracking
+- notes and context tags
+- **History** screen with calendar, metrics, and charts
+- **Insights** screen with trends, correlations, and text summaries
+- **Habits** screen for managing habits, categories, and archive state
+- a default set of starter habits
+- installable PWA setup
+- offline support and local data storage
+
+## Who This Project Is For
+
+utreker is a good fit for people who want to:
+
+- track not only habits, but also internal state
+- understand what affects productivity and wellbeing
+- keep a personal tracker without unnecessary complexity
+- use a local-first app without mandatory signup
+
+It is especially relevant for people who have outgrown the classic “one checkbox per day” format, but do not want to move into heavy, overbuilt analytics systems.
+
+## Tech Stack
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Dexie + IndexedDB
+- React Router
+- vite-plugin-pwa
+
+## Run Locally
+
+```bash
+npm install
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Project Status
+
+This is currently an **MVP** that already demonstrates the core product idea: local-first tracking of habits and daily state with analytics layered on top of personal data.
+
+The current UI is primarily oriented toward Russian-speaking users.
+
+## Why This Project Is Worth Opening on GitHub
+
+- There is a clear product idea here, not just a collection of screens.
+- The positioning against popular habit trackers is concrete and easy to understand.
+- The project addresses a real user problem: connecting habits, mood, and daily context.
+- It is a solid example of a local-first PWA built on a modern React stack.
+
+## Roadmap
+
+Logical next steps for the project include:
+
+- data export and import
+- cross-device sync
+- deeper insights and recommendations
+- more filters and segmentation in history
+- onboarding and first-run setup based on user type
+
+## License
+
+License not selected yet.
