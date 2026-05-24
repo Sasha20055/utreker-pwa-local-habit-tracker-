@@ -11,6 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
+        id: '/',
+        start_url: '/',
         name: 'utreker',
         short_name: 'utreker',
         description: 'Habit tracker with insights',
@@ -33,7 +35,12 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'maskable'
+          },
+          {
+            src: 'icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml'
           }
         ]
       },
@@ -58,6 +65,9 @@ export default defineConfig({
       }
     })
   ],
+  preview: {
+    allowedHosts: true
+  },
   resolve: {
     alias: {
       '@': '/src'
