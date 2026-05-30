@@ -39,6 +39,7 @@ export interface Habit {
   isActive: boolean;
   order: number;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // Category info for UI
@@ -159,7 +160,7 @@ export const CONTEXT_TAG_INFO: Record<ContextTag, { label: string; icon: string 
 const DAILY_FREQUENCY: HabitFrequency = { type: 'daily' };
 
 // Default habits for new users
-export const DEFAULT_HABITS: Omit<Habit, 'id' | 'createdAt'>[] = [
+export const DEFAULT_HABITS: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>[] = [
   { name: 'Вода', icon: '💧', type: 'scale', category: 'health', frequency: DAILY_FREQUENCY, target: 8, isActive: true, order: 0 },
   { name: 'Спорт', icon: '🏃', type: 'binary', category: 'health', frequency: { type: 'weekly_times', timesPerWeek: 3 }, isActive: true, order: 1 },
   { name: 'Чтение', icon: '📖', type: 'binary', category: 'growth', frequency: DAILY_FREQUENCY, isActive: true, order: 2 },

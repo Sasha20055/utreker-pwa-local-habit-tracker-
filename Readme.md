@@ -125,6 +125,46 @@ Preview the production build locally:
 npm run preview
 ```
 
+## Google Drive Sync
+
+Optional cross-device sync stores a single backup file in a hidden, app-private
+folder on the user's own Google Drive (`appDataFolder` scope — the app cannot see
+any other files). It uses browser-side OAuth via Google Identity Services, so there
+is **no backend and no client secret**.
+
+If `VITE_GOOGLE_CLIENT_ID` is not set, the sync UI shows a "not configured" notice
+and only local JSON export/import is available — everything else keeps working.
+
+### Getting an OAuth Client ID
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/) and create a
+   project (or pick an existing one).
+2. **APIs & Services → Library** → enable **Google Drive API**.
+3. **APIs & Services → OAuth consent screen**:
+   - User type: **External**, fill in app name, support email, developer email.
+   - Add the scope `https://www.googleapis.com/auth/drive.appdata`.
+   - While the app is in "Testing", add the Google accounts that may sign in as
+     **Test users** (or submit for verification to allow anyone).
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
+   - Application type: **Web application**.
+   - **Authorized JavaScript origins** — add every origin the app runs on, e.g.
+     `http://localhost:5173` (dev) and `https://<username>.github.io` (Pages).
+     No redirect URIs are needed for the token flow.
+   - Copy the generated **Client ID** (looks like `xxxx.apps.googleusercontent.com`).
+
+The Client ID is **public by design** — it ships in the browser bundle. Security
+comes from the Authorized JavaScript origins list, not from keeping the ID secret.
+There is no client secret in this flow; never put one in frontend code.
+
+### Configuring it
+
+- **Local dev:** copy `.env.example` to `.env.local` and set `VITE_GOOGLE_CLIENT_ID`.
+- **GitHub Pages (Actions):** add a repository secret
+  **Settings → Secrets and variables → Actions → New repository secret** named
+  `VITE_GOOGLE_CLIENT_ID`. The deploy workflow injects it at build time.
+
+Forks just need their own Client ID with their own origins — nothing else to change.
+
 ## Project Status
 
 This is currently an **MVP** that already demonstrates the core product idea: local-first tracking of habits and daily state with analytics layered on top of personal data.

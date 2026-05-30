@@ -26,6 +26,13 @@ export function getDateId(date: Date = new Date()): string {
   return format(date, 'yyyy-MM-dd');
 }
 
+// Notify app about data changes for auto-sync
+export function notifyDataChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('utreker-data-changed'));
+  }
+}
+
 // Day entry operations
 export async function getDayEntry(date: Date = new Date()): Promise<DayEntry | undefined> {
   const id = getDateId(date);
@@ -67,6 +74,7 @@ export async function saveDayEntry(entry: Partial<DayEntry> & { date: Date }): P
     });
   }
 
+  notifyDataChanged();
   return id;
 }
 
@@ -80,22 +88,27 @@ export async function getActiveHabits(): Promise<Habit[]> {
   return habits.filter((habit) => habit.isActive);
 }
 
-export async function createHabit(habit: Omit<Habit, 'id' | 'createdAt'>): Promise<string> {
+export async function createHabit(habit: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const id = crypto.randomUUID();
+  const now = new Date();
   await db.habits.add({
     ...habit,
     id,
-    createdAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
   });
+  notifyDataChanged();
   return id;
 }
 
 export async function updateHabit(id: string, updates: Partial<Habit>): Promise<void> {
-  await db.habits.update(id, updates);
+  await db.habits.update(id, { ...updates, updatedAt: new Date() });
+  notifyDataChanged();
 }
 
 export async function deleteHabit(id: string): Promise<void> {
   await db.habits.delete(id);
+  notifyDataChanged();
 }
 
 export async function reorderHabits(orderedIds: string[]): Promise<void> {
@@ -104,6 +117,7 @@ export async function reorderHabits(orderedIds: string[]): Promise<void> {
       await db.habits.update(orderedIds[i], { order: i });
     }
   });
+  notifyDataChanged();
 }
 
 // Seed default habits on first launch
@@ -117,13 +131,14 @@ export async function seedDefaultHabits(): Promise<void> {
       id: `default-${index + 1}`,
       order: index,
       createdAt: now,
+      updatedAt: now,
     }));
 
     await db.habits.bulkPut(habitsToAdd);
   }
 }
 
-function habitFrequencyKey(habit: Habit | Omit<Habit, 'id' | 'createdAt'>): string {
+function habitFrequencyKey(habit: Habit | Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>): string {
   if (habit.frequency.type === 'daily') return 'daily';
   if (habit.frequency.type === 'weekly_days') {
     return `weekly_days:${(habit.frequency.weeklyDays ?? []).join(',')}`;
@@ -131,7 +146,7 @@ function habitFrequencyKey(habit: Habit | Omit<Habit, 'id' | 'createdAt'>): stri
   return `weekly_times:${habit.frequency.timesPerWeek ?? 0}`;
 }
 
-function defaultHabitSignature(habit: Habit | Omit<Habit, 'id' | 'createdAt'>): string {
+function defaultHabitSignature(habit: Habit | Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>): string {
   return [
     habit.name.trim().toLowerCase(),
     habit.icon,

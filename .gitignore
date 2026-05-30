@@ -5,6 +5,10 @@ node_modules/
 .agents/
 .claude/
 
+# Local env (Google Client ID for dev)
+.env.local
+.env.*.local
+
 # Build artifacts
 dist/
 .dist/

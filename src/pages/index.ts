@@ -1,4 +1,5 @@
-export { Today } from './Today';
-export { Habits } from './Habits';
-export { History } from './History';
-export { Insights } from './Insights';
+export * from './Today';
+export * from './Habits';
+export * from './History';
+export * from './Insights';
+export * from './Settings';
