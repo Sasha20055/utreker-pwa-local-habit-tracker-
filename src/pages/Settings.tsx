@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { exportDataToFile, importDataFromFile } from '@/lib/sync';
 import { GoogleDriveSync } from '@/lib/googleDriveSync';
-import { resolveTheme, setTheme, type Theme } from '@/lib/theme';
+import { getThemePref, setThemePref, type ThemePref } from '@/lib/theme';
 
 const STALE_BACKUP_DAYS = 7;
 
@@ -29,13 +29,13 @@ export function Settings() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [autoSync, setAutoSync] = useState(() => localStorage.getItem('utreker_auto_sync') === 'true');
   const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [theme, setThemeState] = useState<Theme>(() => resolveTheme());
+  const [theme, setThemeState] = useState<ThemePref>(() => getThemePref());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isConfigured = GoogleDriveSync.isConfigured();
 
-  const handleThemeChange = (next: Theme) => {
+  const handleThemeChange = (next: ThemePref) => {
     setThemeState(next);
-    setTheme(next);
+    setThemePref(next);
   };
 
   useEffect(() => {
@@ -171,26 +171,29 @@ export function Settings() {
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <span>🎨</span> Оформление
         </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => handleThemeChange('dark')}
-            aria-pressed={theme === 'dark'}
-            className={`py-3 px-4 rounded-xl font-medium transition-colors ${
-              theme === 'dark' ? 'bg-primary/20 ring-1 ring-primary text-primary' : 'bg-surface text-text-muted hover:bg-surface-hover'
-            }`}
-          >
-            🌙 Тёмная
-          </button>
-          <button
-            onClick={() => handleThemeChange('light')}
-            aria-pressed={theme === 'light'}
-            className={`py-3 px-4 rounded-xl font-medium transition-colors ${
-              theme === 'light' ? 'bg-primary/20 ring-1 ring-primary text-primary' : 'bg-surface text-text-muted hover:bg-surface-hover'
-            }`}
-          >
-            ☀️ Светлая
-          </button>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { value: 'system', label: '💻 Система' },
+            { value: 'light', label: '☀️ Светлая' },
+            { value: 'dark', label: '🌙 Тёмная' },
+          ] as const).map((option) => (
+            <button
+              key={option.value}
+              onClick={() => handleThemeChange(option.value)}
+              aria-pressed={theme === option.value}
+              className={`py-3 px-2 rounded-xl text-sm font-medium transition-colors ${
+                theme === option.value
+                  ? 'bg-primary/20 ring-1 ring-primary text-primary'
+                  : 'bg-surface text-text-muted hover:bg-surface-hover'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
+        <p className="text-xs text-text-dim">
+          «Система» подстраивается под тему вашего устройства.
+        </p>
       </section>
 
       <section className="glass rounded-3xl p-6 space-y-4">

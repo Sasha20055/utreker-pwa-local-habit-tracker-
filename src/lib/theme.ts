@@ -1,27 +1,28 @@
-export type Theme = 'light' | 'dark';
+export type ThemePref = 'system' | 'light' | 'dark';
 
 const THEME_KEY = 'utreker_theme';
 
-export function getStoredTheme(): Theme | null {
+// Default is 'system': follow the OS until the user makes an explicit choice.
+export function getThemePref(): ThemePref {
   const value = localStorage.getItem(THEME_KEY);
-  return value === 'light' || value === 'dark' ? value : null;
+  return value === 'light' || value === 'dark' ? value : 'system';
 }
 
-// Stored preference wins; otherwise follow the OS; default to the app's dark design.
-export function resolveTheme(): Theme {
-  const stored = getStoredTheme();
-  if (stored) return stored;
-  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
-    return 'light';
+export function applyThemePref(pref: ThemePref): void {
+  if (pref === 'system') {
+    // No data-theme attribute → the CSS prefers-color-scheme media query decides,
+    // which also updates live when the OS theme changes.
+    delete document.documentElement.dataset.theme;
+  } else {
+    document.documentElement.dataset.theme = pref;
   }
-  return 'dark';
 }
 
-export function applyTheme(theme: Theme): void {
-  document.documentElement.dataset.theme = theme;
-}
-
-export function setTheme(theme: Theme): void {
-  localStorage.setItem(THEME_KEY, theme);
-  applyTheme(theme);
+export function setThemePref(pref: ThemePref): void {
+  if (pref === 'system') {
+    localStorage.removeItem(THEME_KEY);
+  } else {
+    localStorage.setItem(THEME_KEY, pref);
+  }
+  applyThemePref(pref);
 }
