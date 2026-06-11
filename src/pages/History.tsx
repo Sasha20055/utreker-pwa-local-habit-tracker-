@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Card, CardContent } from '@/components/ui';
+import { YearHeatmap, DayEditor } from '@/components/features';
 import { db, getMonthEntries, getDayEntries, getDateId } from '@/lib/db';
 import { formatMonthYear, getCalendarDays, isToday, cn } from '@/lib/utils';
-import { isHabitScheduledOnDate } from '@/lib/habitSchedule';
-import { MOOD_EMOJIS, ENERGY_EMOJIS, getHabitCategoryMeta } from '@/types';
+import { isHabitScheduledOnDate, isHabitCompleted } from '@/lib/habitSchedule';
+import { MOOD_EMOJIS, ENERGY_EMOJIS, getHabitCategoryMeta, CONTEXT_TAG_INFO } from '@/types';
 import { usePageTitle } from '@/hooks';
-import type { DayEntry, Habit } from '@/types';
+import type { DayEntry, Habit, ContextTag } from '@/types';
+
+const SEARCH_TAGS: ContextTag[] = ['stress', 'illness', 'travel', 'holiday', 'busy', 'rest', 'celebration'];
 
 type ComparisonMode = 'week' | 'month';
 type GraphMetric = 'completion' | 'mood' | 'energy';
@@ -65,8 +68,7 @@ function getEntryCompletionRate(entry: DayEntry | undefined, date: Date, habits:
   for (const habit of scheduledHabits) {
     const progress = entry?.habits.find((item) => item.habitId === habit.id);
     const value = progress?.value ?? 0;
-    const isCompleted = habit.type === 'binary' ? value > 0 : value >= (habit.target ?? 1);
-    if (isCompleted) completed++;
+    if (isHabitCompleted(habit, value)) completed++;
   }
 
   return Math.round((completed / scheduledHabits.length) * 100);
@@ -83,8 +85,7 @@ function getHabitStability(habit: Habit, entriesMap: Map<string, DayEntry>, rang
     const entry = entriesMap.get(getDateId(date));
     const progress = entry?.habits.find((item) => item.habitId === habit.id);
     const value = progress?.value ?? 0;
-    const isCompleted = habit.type === 'binary' ? value > 0 : value >= (habit.target ?? 1);
-    if (isCompleted) completedDays++;
+    if (isHabitCompleted(habit, value)) completedDays++;
   }
 
   if (trackedDays === 0) return null;
@@ -237,6 +238,8 @@ export function History() {
   const [graphMetric, setGraphMetric] = useState<GraphMetric>('completion');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [habitFilter, setHabitFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTags, setSearchTags] = useState<ContextTag[]>([]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -248,6 +251,22 @@ export function History() {
     [year, month]
   );
   const habits = useLiveQuery(() => db.habits.orderBy('order').toArray(), []);
+
+  const searchActive = searchQuery.trim().length > 0 || searchTags.length > 0;
+  const allDays = useLiveQuery(
+    () => (searchActive ? db.days.orderBy('date').reverse().toArray() : Promise.resolve<DayEntry[]>([])),
+    [searchActive]
+  );
+
+  const searchResults = useMemo(() => {
+    if (!searchActive) return [];
+    const q = searchQuery.trim().toLowerCase();
+    return (allDays ?? []).filter((day) => {
+      const matchesText = !q || (day.notes ?? '').toLowerCase().includes(q);
+      const matchesTags = searchTags.every((tag) => day.tags?.includes(tag));
+      return matchesText && matchesTags;
+    });
+  }, [allDays, searchActive, searchQuery, searchTags]);
 
   const entriesMap = useMemo(() => {
     const map = new Map<string, DayEntry>();
@@ -567,6 +586,79 @@ export function History() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent className="space-y-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Поиск по заметкам…"
+            className="w-full px-3 py-2 bg-transparent border border-border rounded-xl text-text placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <div className="flex flex-wrap gap-2">
+            {SEARCH_TAGS.map((tag) => {
+              const active = searchTags.includes(tag);
+              const info = CONTEXT_TAG_INFO[tag];
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() =>
+                    setSearchTags((prev) =>
+                      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                    )
+                  }
+                  aria-pressed={active}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-all',
+                    active ? 'bg-primary/20 text-primary ring-1 ring-primary' : 'glass text-text-muted hover:glass-hover'
+                  )}
+                >
+                  <span>{info.icon}</span>
+                  <span>{info.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {searchActive && (
+            <div className="space-y-2 pt-1">
+              <div className="text-xs text-text-dim">Найдено: {searchResults.length}</div>
+              {searchResults.slice(0, 50).map((day) => {
+                const date = new Date(day.date);
+                return (
+                  <button
+                    key={day.id}
+                    type="button"
+                    onClick={() => {
+                      const normalized = normalizeDate(date);
+                      setSelectedDate(normalized);
+                      setCurrentDate(normalized);
+                    }}
+                    className="w-full text-left glass rounded-xl px-3 py-2 hover:glass-hover touch-feedback"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-text">{formatShortDate(date)}</span>
+                      <span className="text-sm">
+                        {day.mood ? MOOD_EMOJIS[day.mood] : ''}{day.energy ? ENERGY_EMOJIS[day.energy] : ''}
+                      </span>
+                    </div>
+                    {day.tags?.length > 0 && (
+                      <div className="text-xs text-text-dim mt-0.5">
+                        {day.tags.map((t) => CONTEXT_TAG_INFO[t]?.label).join(', ')}
+                      </div>
+                    )}
+                    {day.notes && (
+                      <div className="text-xs text-text-muted truncate mt-0.5">{day.notes}</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -669,6 +761,12 @@ export function History() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent>
+          <YearHeatmap />
+        </CardContent>
+      </Card>
+
       {selectedDate && (
         <Card className="animate-fade-in">
           <CardContent className="space-y-4">
@@ -691,90 +789,42 @@ export function History() {
               </button>
             </div>
 
-            {!selectedEntry && (
-              <div className="glass rounded-xl p-3 text-sm text-text-muted">
-                На этот день нет записи. Это учитывается как пропуск в истории.
+            {selectedEntry && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="glass rounded-xl p-3">
+                  <div className="text-xs text-text-muted">Выполнение за день</div>
+                  <div className="text-lg font-bold text-text">
+                    {getEntryCompletionRate(selectedEntry, selectedDate, filteredHabits) ?? 0}%
+                  </div>
+                  <div className="text-xs text-text-dim">
+                    {selectedPrevEntry
+                      ? `${(() => {
+                          const current = getEntryCompletionRate(selectedEntry, selectedDate, filteredHabits) ?? 0;
+                          const prevDate = new Date(selectedDate);
+                          prevDate.setDate(prevDate.getDate() - 1);
+                          const prevRate = getEntryCompletionRate(selectedPrevEntry, prevDate, filteredHabits) ?? 0;
+                          const delta = current - prevRate;
+                          return `${delta > 0 ? '+' : ''}${delta}% к предыдущему дню`;
+                        })()}`
+                      : 'Нет данных за предыдущий день'}
+                  </div>
+                </div>
+                <div className="glass rounded-xl p-3">
+                  <div className="text-xs text-text-muted">Состояние</div>
+                  <div className="text-lg font-bold text-text flex items-center gap-2">
+                    {selectedEntry.mood ? MOOD_EMOJIS[selectedEntry.mood] : '—'}
+                    {selectedEntry.energy ? ENERGY_EMOJIS[selectedEntry.energy] : '—'}
+                  </div>
+                  <div className="text-xs text-text-dim">
+                    {selectedPrevEntry
+                      ? `Настроение: ${(selectedEntry.mood ?? 0) - (selectedPrevEntry.mood ?? 0) >= 0 ? '+' : ''}${(selectedEntry.mood ?? 0) - (selectedPrevEntry.mood ?? 0)}`
+                      : 'Нет сравнения'}
+                  </div>
+                </div>
               </div>
             )}
 
-            {selectedEntry && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="glass rounded-xl p-3">
-                    <div className="text-xs text-text-muted">Выполнение за день</div>
-                    <div className="text-lg font-bold text-text">
-                      {getEntryCompletionRate(selectedEntry, selectedDate, filteredHabits) ?? 0}%
-                    </div>
-                    <div className="text-xs text-text-dim">
-                      {selectedPrevEntry
-                        ? `${(() => {
-                            const current = getEntryCompletionRate(selectedEntry, selectedDate, filteredHabits) ?? 0;
-                            const prevDate = new Date(selectedDate);
-                            prevDate.setDate(prevDate.getDate() - 1);
-                            const prevRate = getEntryCompletionRate(selectedPrevEntry, prevDate, filteredHabits) ?? 0;
-                            const delta = current - prevRate;
-                            return `${delta > 0 ? '+' : ''}${delta}% к предыдущему дню`;
-                          })()}`
-                        : 'Нет данных за предыдущий день'}
-                    </div>
-                  </div>
-                  <div className="glass rounded-xl p-3">
-                    <div className="text-xs text-text-muted">Состояние</div>
-                    <div className="text-lg font-bold text-text flex items-center gap-2">
-                      {selectedEntry.mood ? MOOD_EMOJIS[selectedEntry.mood] : '—'}
-                      {selectedEntry.energy ? ENERGY_EMOJIS[selectedEntry.energy] : '—'}
-                    </div>
-                    <div className="text-xs text-text-dim">
-                      {selectedPrevEntry
-                        ? `Настроение: ${(selectedEntry.mood ?? 0) - (selectedPrevEntry.mood ?? 0) >= 0 ? '+' : ''}${(selectedEntry.mood ?? 0) - (selectedPrevEntry.mood ?? 0)}`
-                        : 'Нет сравнения'}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-text mb-2">Привычки за день</h4>
-                  <div className="space-y-2">
-                    {filteredHabits
-                      .filter((habit) => isHabitScheduledOnDate(habit, selectedDate))
-                      .map((habit) => {
-                        const progress = selectedEntry.habits.find((item) => item.habitId === habit.id);
-                        const value = progress?.value ?? 0;
-                        const completed = habit.type === 'binary'
-                          ? value > 0
-                          : value >= (habit.target ?? 1);
-
-                        return (
-                          <div key={habit.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between">
-                            <div className="text-sm text-text truncate mr-2">{habit.icon} {habit.name}</div>
-                            <div className="text-xs text-text-muted">
-                              {habit.type === 'binary'
-                                ? (completed ? 'Выполнено' : 'Не выполнено')
-                                : `${value}/${habit.target ?? 1}`}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-
-                {selectedEntry.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedEntry.tags.map((tag) => (
-                      <span key={tag} className="px-2 py-1 text-xs glass rounded-full text-text-muted">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {selectedEntry.notes && (
-                  <div className="p-3 glass rounded-xl">
-                    <p className="text-sm text-text whitespace-pre-wrap">{selectedEntry.notes}</p>
-                  </div>
-                )}
-              </>
-            )}
+            <DayEditor date={selectedDate} habits={habits ?? []} />
           </CardContent>
         </Card>
       )}

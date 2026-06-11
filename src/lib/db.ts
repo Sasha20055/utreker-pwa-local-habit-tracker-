@@ -1,12 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { format } from 'date-fns';
-import type { DayEntry, Habit } from '@/types';
+import type { DayEntry, Habit, Tombstone } from '@/types';
 import { DEFAULT_HABITS as defaultHabits } from '@/types';
 
 // Database schema
 class UtrekerDatabase extends Dexie {
   days!: EntityTable<DayEntry, 'id'>;
   habits!: EntityTable<Habit, 'id'>;
+  tombstones!: EntityTable<Tombstone, 'key'>;
 
   constructor() {
     super('utreker');
@@ -14,6 +15,13 @@ class UtrekerDatabase extends Dexie {
     this.version(1).stores({
       days: 'id, date',
       habits: 'id, order, isActive',
+    });
+
+    // v2: tombstones record deletions so they propagate across devices via sync
+    this.version(2).stores({
+      days: 'id, date',
+      habits: 'id, order, isActive',
+      tombstones: 'key, deletedAt',
     });
   }
 }
@@ -106,8 +114,32 @@ export async function updateHabit(id: string, updates: Partial<Habit>): Promise<
   notifyDataChanged();
 }
 
+// Record tombstones so a deletion isn't resurrected by a later sync/merge
+export async function recordTombstones(
+  type: Tombstone['type'],
+  ids: string[]
+): Promise<void> {
+  if (ids.length === 0) return;
+  const deletedAt = new Date();
+  await db.tombstones.bulkPut(
+    ids.map((entityId) => ({ key: `${type}:${entityId}`, type, entityId, deletedAt }))
+  );
+}
+
+export async function getTombstones(): Promise<Tombstone[]> {
+  return db.tombstones.toArray();
+}
+
 export async function deleteHabit(id: string): Promise<void> {
+  await recordTombstones('habit', [id]);
   await db.habits.delete(id);
+  notifyDataChanged();
+}
+
+export async function deleteHabits(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await recordTombstones('habit', ids);
+  await db.habits.bulkDelete(ids);
   notifyDataChanged();
 }
 

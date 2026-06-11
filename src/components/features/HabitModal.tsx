@@ -7,10 +7,13 @@ import type {
   HabitCategory,
   HabitFrequency,
   FrequencyType,
+  HabitPolarity,
   Weekday,
   BuiltinHabitCategory,
 } from '@/types';
 import { HABIT_CATEGORIES, WEEKDAY_LABELS } from '@/types';
+
+const HABIT_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#8b5cf6', '#64748b'];
 
 interface HabitModalProps {
   isOpen: boolean;
@@ -33,6 +36,10 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
   const [frequencyType, setFrequencyType] = useState<FrequencyType>('daily');
   const [weeklyDays, setWeeklyDays] = useState<Weekday[]>([0, 2, 4]); // Mon, Wed, Fri
   const [timesPerWeek, setTimesPerWeek] = useState(3);
+  const [intervalDays, setIntervalDays] = useState(3);
+  const [color, setColor] = useState<string | undefined>(undefined);
+  const [polarity, setPolarity] = useState<HabitPolarity>('positive');
+  const [limit, setLimit] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
@@ -58,6 +65,10 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
         setFrequencyType(habit.frequency?.type ?? 'daily');
         setWeeklyDays(habit.frequency?.weeklyDays ?? [0, 2, 4]);
         setTimesPerWeek(habit.frequency?.timesPerWeek ?? 3);
+        setIntervalDays(habit.frequency?.intervalDays ?? 3);
+        setColor(habit.color);
+        setPolarity(habit.polarity ?? 'positive');
+        setLimit(habit.limit ?? 0);
         setIsActive(habit.isActive);
         setGoalTarget(habit.goalTarget ?? 12);
         setGoalCurrent(habit.goalCurrent ?? 0);
@@ -73,6 +84,10 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
         setFrequencyType('daily');
         setWeeklyDays([0, 2, 4]);
         setTimesPerWeek(3);
+        setIntervalDays(3);
+        setColor(undefined);
+        setPolarity('positive');
+        setLimit(0);
         setIsActive(true);
         setGoalTarget(12);
         setGoalCurrent(0);
@@ -111,14 +126,20 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
       type: frequencyType,
       ...(frequencyType === 'weekly_days' && { weeklyDays }),
       ...(frequencyType === 'weekly_times' && { timesPerWeek }),
+      ...(frequencyType === 'interval' && { intervalDays: Math.max(1, intervalDays) }),
     };
+
+    const isLimit = polarity === 'limit' && type !== 'goal';
 
     const habitData = {
       name: name.trim(),
       icon,
+      color: color || undefined,
       type,
       category,
       target: type === 'scale' ? target : undefined,
+      polarity: isLimit ? ('limit' as const) : undefined,
+      limit: isLimit ? Math.max(0, limit) : undefined,
       frequency,
       isActive,
       ...(type === 'goal' && {
@@ -236,6 +257,45 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
                   {emoji}
                 </button>
               ))}
+              <input
+                type="text"
+                value={icon}
+                onChange={(e) => setIcon(e.target.value.slice(0, 2) || '🎯')}
+                aria-label="Свой эмодзи"
+                className="w-10 h-10 rounded-xl text-xl text-center bg-transparent border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Свой эмодзи"
+              />
+            </div>
+          </div>
+
+          {/* Color accent */}
+          <div>
+            <label className="block text-sm text-text-muted mb-2">Цвет</label>
+            <div className="flex flex-wrap gap-2 items-center">
+              {HABIT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  aria-label={`Цвет ${c}`}
+                  aria-pressed={color === c}
+                  className={cn(
+                    'w-8 h-8 rounded-full transition-all',
+                    color === c ? 'ring-2 ring-offset-2 ring-offset-surface ring-white' : ''
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setColor(undefined)}
+                className={cn(
+                  'px-3 h-8 rounded-full text-xs transition-all',
+                  color === undefined ? 'bg-primary/20 ring-1 ring-primary text-primary' : 'glass text-text-muted'
+                )}
+              >
+                Без цвета
+              </button>
             </div>
           </div>
 
@@ -288,6 +348,46 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
                 min={1}
                 className="w-full px-4 py-3 bg-transparent border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
+            </div>
+          )}
+
+          {/* Limit / quit habit */}
+          {type !== 'goal' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 glass rounded-xl">
+                <div>
+                  <div className="text-text font-medium">Привычка-ограничитель</div>
+                  <div className="text-xs text-text-muted">Цель — не превышать лимит или бросить</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPolarity(polarity === 'limit' ? 'positive' : 'limit')}
+                  aria-pressed={polarity === 'limit'}
+                  className={cn(
+                    'w-12 h-7 rounded-full transition-colors relative shrink-0',
+                    polarity === 'limit' ? 'bg-primary' : 'bg-surface'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'absolute top-1 w-5 h-5 rounded-full bg-white transition-transform',
+                      polarity === 'limit' ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
+                </button>
+              </div>
+              {polarity === 'limit' && (
+                <div>
+                  <label className="block text-sm text-text-muted mb-2">Лимит в день (0 = совсем бросить)</label>
+                  <input
+                    type="number"
+                    value={limit}
+                    onChange={(e) => setLimit(Math.max(0, parseInt(e.target.value) || 0))}
+                    min={0}
+                    className="w-full px-4 py-3 bg-transparent border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -403,18 +503,19 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
             <div>
               <label className="block text-sm text-text-muted mb-2">Периодичность</label>
               <div className="space-y-3">
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { value: 'daily', label: 'Каждый день' },
                     { value: 'weekly_days', label: 'По дням' },
                     { value: 'weekly_times', label: 'Раз в неделю' },
+                    { value: 'interval', label: 'Каждые N дней' },
                   ].map(option => (
                     <button
                       key={option.value}
                       type="button"
                       onClick={() => setFrequencyType(option.value as FrequencyType)}
                       className={cn(
-                        'flex-1 px-3 py-2 rounded-xl text-sm transition-all',
+                        'px-3 py-2 rounded-xl text-sm transition-all',
                         frequencyType === option.value
                           ? 'bg-primary/20 ring-1 ring-primary text-primary'
                           : 'glass hover:glass-hover text-text-muted'
@@ -424,6 +525,21 @@ export function HabitModal({ isOpen, onClose, habit }: HabitModalProps) {
                     </button>
                   ))}
                 </div>
+
+                {/* Interval days */}
+                {frequencyType === 'interval' && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-text-muted">Каждые</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={intervalDays}
+                      onChange={(e) => setIntervalDays(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 px-3 py-2 bg-transparent border border-border rounded-xl text-text text-center focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <span className="text-sm text-text-muted">дней</span>
+                  </div>
+                )}
 
                 {/* Weekly days picker */}
                 {frequencyType === 'weekly_days' && (

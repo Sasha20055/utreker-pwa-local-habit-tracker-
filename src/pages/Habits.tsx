@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Card, CardContent } from '@/components/ui';
 import { HabitModal } from '@/components/features/HabitModal';
-import { db, getEntriesForAnalytics } from '@/lib/db';
+import { db, getEntriesForAnalytics, deleteHabits } from '@/lib/db';
 import { calculateHabitStats, calculateOverallStats, type HabitStats } from '@/lib/habitStats';
 import { cn } from '@/lib/utils';
 import { usePageTitle } from '@/hooks';
@@ -47,7 +47,12 @@ function HabitListCard({
       className="w-full text-left glass rounded-xl p-4 hover:glass-hover transition-all touch-feedback"
     >
       <div className="flex items-center gap-3">
-        <span className="text-2xl">{habit.icon}</span>
+        <span
+          className="text-2xl w-9 h-9 flex items-center justify-center rounded-lg shrink-0"
+          style={habit.color ? { backgroundColor: `${habit.color}2e` } : undefined}
+        >
+          {habit.icon}
+        </span>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -74,8 +79,14 @@ function HabitListCard({
             </div>
           ) : stats ? (
             <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
-              <span>🔥 {stats.currentStreak}д</span>
-              <span>📊 {stats.completionRate}%</span>
+              {stats.weekly ? (
+                <span>📊 {stats.weekly.doneThisWeek}/{stats.weekly.target} на этой неделе</span>
+              ) : stats.trackedDays > 0 ? (
+                <span>📊 {stats.completedDays}/{stats.trackedDays} · {stats.completionRate}%</span>
+              ) : (
+                <span className="text-text-dim">Пока нет данных</span>
+              )}
+              {stats.currentStreak > 0 && <span>🔥 {stats.currentStreak}</span>}
               <MiniGraph days={stats.last7Days} />
             </div>
           ) : (
@@ -85,8 +96,21 @@ function HabitListCard({
 
         {stats && !isGoal && (
           <div className="text-right">
-            <div className="text-lg font-bold text-primary">{stats.currentStreak}</div>
-            <div className="text-xs text-text-muted">дней</div>
+            {stats.weekly ? (
+              <>
+                <div className="text-lg font-bold text-primary">
+                  {stats.weekly.doneThisWeek}/{stats.weekly.target}
+                </div>
+                <div className="text-xs text-text-muted">на неделе</div>
+              </>
+            ) : (
+              <>
+                <div className="text-lg font-bold text-primary">
+                  {stats.trackedDays > 0 ? `${stats.completionRate}%` : '—'}
+                </div>
+                <div className="text-xs text-text-muted">за 30 дней</div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -229,7 +253,7 @@ export function Habits() {
       return;
     }
 
-    await db.habits.bulkDelete(archived.map((habit) => habit.id));
+    await deleteHabits(archived.map((habit) => habit.id));
     setConfirmArchiveCleanup(false);
   };
 

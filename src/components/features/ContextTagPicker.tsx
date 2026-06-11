@@ -36,6 +36,7 @@ export function ContextTagPicker({
               key={tag}
               type="button"
               onClick={() => toggleTag(tag)}
+              aria-pressed={isSelected}
               className={cn(
                 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm',
                 'transition-all duration-200 touch-feedback',

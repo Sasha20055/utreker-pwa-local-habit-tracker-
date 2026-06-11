@@ -1,6 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { exportDataToFile, importDataFromFile } from '@/lib/sync';
 import { GoogleDriveSync } from '@/lib/googleDriveSync';
+import { resolveTheme, setTheme, type Theme } from '@/lib/theme';
+
+const STALE_BACKUP_DAYS = 7;
+
+function daysSince(date: Date): number {
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function formatLastSync(date: Date | null): string {
+  if (!date) return 'ещё не было';
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return 'только что';
+  if (minutes < 60) return `${minutes} мин назад`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ч назад`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'вчера';
+  return `${days} дн назад`;
+}
 
 export function Settings() {
   const [isExporting, setIsExporting] = useState(false);
@@ -8,11 +28,19 @@ export function Settings() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [autoSync, setAutoSync] = useState(() => localStorage.getItem('utreker_auto_sync') === 'true');
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [theme, setThemeState] = useState<Theme>(() => resolveTheme());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isConfigured = GoogleDriveSync.isConfigured();
 
+  const handleThemeChange = (next: Theme) => {
+    setThemeState(next);
+    setTheme(next);
+  };
+
   useEffect(() => {
     setIsAuthenticated(GoogleDriveSync.isAuthenticated());
+    setLastSync(GoogleDriveSync.getLastSync());
   }, []);
 
   const handleExport = async () => {
@@ -60,8 +88,8 @@ export function Settings() {
         await GoogleDriveSync.authenticate();
         setIsAuthenticated(true);
       }
-    } catch (e: any) {
-      alert(e?.message || 'Ошибка авторизации Google');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Ошибка авторизации Google');
     } finally {
       setIsSyncing(false);
     }
@@ -77,6 +105,7 @@ export function Settings() {
     try {
       setIsSyncing(true);
       await GoogleDriveSync.pushToDrive();
+      setLastSync(GoogleDriveSync.getLastSync());
       alert('Данные успешно выгружены в Google Drive!');
     } catch (e) {
       alert('Ошибка синхронизации');
@@ -139,6 +168,32 @@ export function Settings() {
       </section>
 
       <section className="glass rounded-3xl p-6 space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <span>🎨</span> Оформление
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => handleThemeChange('dark')}
+            aria-pressed={theme === 'dark'}
+            className={`py-3 px-4 rounded-xl font-medium transition-colors ${
+              theme === 'dark' ? 'bg-primary/20 ring-1 ring-primary text-primary' : 'bg-surface text-text-muted hover:bg-surface-hover'
+            }`}
+          >
+            🌙 Тёмная
+          </button>
+          <button
+            onClick={() => handleThemeChange('light')}
+            aria-pressed={theme === 'light'}
+            className={`py-3 px-4 rounded-xl font-medium transition-colors ${
+              theme === 'light' ? 'bg-primary/20 ring-1 ring-primary text-primary' : 'bg-surface text-text-muted hover:bg-surface-hover'
+            }`}
+          >
+            ☀️ Светлая
+          </button>
+        </div>
+      </section>
+
+      <section className="glass rounded-3xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <span>☁️</span> Google Drive Sync
@@ -172,6 +227,18 @@ export function Settings() {
           </div>
         ) : isAuthenticated ? (
           <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between bg-surface/50 p-4 rounded-xl">
+              <span className="text-sm text-text-muted">Последний бэкап</span>
+              <span className="text-sm font-medium text-text">{formatLastSync(lastSync)}</span>
+            </div>
+            {(!lastSync || daysSince(lastSync) >= STALE_BACKUP_DAYS) && (
+              <div className="bg-amber-500/10 text-amber-400 p-3 rounded-xl text-xs">
+                {lastSync
+                  ? `Данные не выгружались уже ${daysSince(lastSync)} дн. Нажмите «Выгрузить», чтобы обновить резервную копию.`
+                  : 'Резервной копии в облаке ещё нет. Нажмите «Выгрузить», чтобы создать её.'}
+              </div>
+            )}
+
             <label className="flex items-center justify-between bg-surface/50 p-4 rounded-xl cursor-pointer">
               <span className="font-medium text-sm">Автоматическая синхронизация</span>
               <div className="relative inline-block w-12 h-6 rounded-full bg-surface-active">

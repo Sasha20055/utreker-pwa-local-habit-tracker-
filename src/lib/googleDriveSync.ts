@@ -12,6 +12,7 @@ const BACKUP_FILE_NAME = 'utreker-backup.json';
 
 const TOKEN_KEY = 'utreker_google_token';
 const FILE_ID_KEY = 'utreker_google_file_id';
+const LAST_SYNC_KEY = 'utreker_last_sync';
 
 interface StoredToken {
   accessToken: string;
@@ -52,6 +53,18 @@ export class GoogleDriveSync {
   /** Настроен ли Client ID на этапе сборки */
   static isConfigured(): boolean {
     return Boolean(CLIENT_ID);
+  }
+
+  private static markSynced(): void {
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  }
+
+  /** Время последней успешной синхронизации (или null) */
+  static getLastSync(): Date | null {
+    const raw = localStorage.getItem(LAST_SYNC_KEY);
+    if (!raw) return null;
+    const date = new Date(raw);
+    return isNaN(date.getTime()) ? null : date;
   }
 
   // --- Загрузка GIS-скрипта ---
@@ -210,6 +223,8 @@ export class GoogleDriveSync {
       const created = (await resp.json()) as { id?: string };
       if (created.id) localStorage.setItem(FILE_ID_KEY, created.id);
     }
+
+    this.markSynced();
   }
 
   /** Загрузка данных из Google Drive и merge с локальными (Pull) */
@@ -226,5 +241,6 @@ export class GoogleDriveSync {
 
     const payload = (await resp.json()) as SyncPayload;
     await mergeSyncPayload(payload);
+    this.markSynced();
   }
 }

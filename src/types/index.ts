@@ -10,7 +10,10 @@ export type BuiltinHabitCategory = 'health' | 'productivity' | 'growth' | 'finan
 export type HabitCategory = BuiltinHabitCategory | string;
 
 // Frequency type for periodic habits
-export type FrequencyType = 'daily' | 'weekly_days' | 'weekly_times';
+export type FrequencyType = 'daily' | 'weekly_days' | 'weekly_times' | 'interval';
+
+// Polarity: positive habits to build, or "limit" habits to reduce/quit
+export type HabitPolarity = 'positive' | 'limit';
 
 // Weekday for scheduling
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Monday, 6 = Sunday
@@ -20,6 +23,7 @@ export interface HabitFrequency {
   type: FrequencyType;
   weeklyDays?: Weekday[]; // For 'weekly_days': specific days like [0, 2, 4] (Mon, Wed, Fri)
   timesPerWeek?: number;  // For 'weekly_times': e.g., 3 times per week
+  intervalDays?: number;  // For 'interval': every N days (e.g., 3)
 }
 
 // Habit definition (settings)
@@ -30,6 +34,9 @@ export interface Habit {
   type: HabitType;
   category: HabitCategory;
   target?: number; // For scale type: max value (e.g., 8 glasses of water)
+  color?: string;  // Optional accent color (hex), overrides category color
+  polarity?: HabitPolarity; // 'limit' = stay at or under `limit` (e.g. quit smoking)
+  limit?: number;  // For polarity 'limit': max allowed per day (0 = fully quit)
   frequency: HabitFrequency;
   // For goal type
   goalTarget?: number;   // Total target (e.g., 52 books)
@@ -145,6 +152,22 @@ export const ENERGY_LABELS: Record<EnergyLevel, string> = {
   5: 'Энергия!',
 };
 
+// Tags that excuse a day from breaking a streak (planned/unavoidable off-days).
+// A tagged day is skipped: it doesn't count as a miss and doesn't lower the completion rate.
+export const SKIP_TAGS: ContextTag[] = ['illness', 'travel', 'holiday', 'rest'];
+
+// Tags that confound mood/energy correlations: on these days both state and behavior
+// collapse together (e.g. illness), which manufactures false correlations. Excluded from the sample.
+export const CONFOUNDING_TAGS: ContextTag[] = ['illness', 'stress', 'travel'];
+
+// Soft-deletion marker propagated across devices so a deletion isn't undone by sync.
+export interface Tombstone {
+  key: string; // `${type}:${entityId}`
+  type: 'habit' | 'day';
+  entityId: string;
+  deletedAt: Date;
+}
+
 // Context tag labels and icons
 export const CONTEXT_TAG_INFO: Record<ContextTag, { label: string; icon: string }> = {
   stress: { label: 'Стресс', icon: '\u{1F4A2}' },
@@ -186,7 +209,12 @@ export interface CorrelationInsight {
   habitName: string;
   metric: 'mood' | 'energy';
   correlation: number; // Pearson coefficient (-1 to 1)
-  impact: string; // Human-readable impact description
+  impact: string; // Human-readable impact description (associative, not causal)
+  confidence: 'low' | 'medium' | 'high'; // how much data backs this finding
+  sampleWith: number; // days the habit was done (and metric present, not confounded)
+  sampleWithout: number; // days the habit was scheduled but not done
+  avgWith: number; // average metric on "done" days
+  avgWithout: number; // average metric on "not done" days
 }
 
 export interface ComparisonInsight {

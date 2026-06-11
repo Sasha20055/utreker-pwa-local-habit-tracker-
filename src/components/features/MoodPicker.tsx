@@ -20,6 +20,7 @@ export function MoodPicker({ value, onChange, label = 'Настроение' }: 
             key={level}
             type="button"
             onClick={() => onChange(level)}
+            aria-pressed={value === level}
             className={cn(
               'min-w-0 flex flex-col items-center gap-1 px-1 py-2 sm:p-3 rounded-xl transition-all duration-200',
               'touch-feedback hover:scale-105 active:scale-95',

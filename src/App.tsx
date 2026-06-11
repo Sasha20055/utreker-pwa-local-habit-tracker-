@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
-import { Navigation } from '@/components/ui';
+import { Navigation, ErrorBoundary } from '@/components/ui';
+import { Onboarding } from '@/components/features';
 import { Today, History, Insights, Habits, Settings } from '@/pages';
 import { initDatabase } from '@/lib/db';
 
@@ -14,8 +15,13 @@ function App() {
     let syncTimeout: ReturnType<typeof setTimeout>;
 
     const initAndSync = async () => {
+      // Ask the browser to keep our IndexedDB data from being evicted under storage pressure
+      if (navigator.storage?.persist) {
+        navigator.storage.persist().catch(() => {});
+      }
+
       await initDatabase();
-      
+
       // Auto-pull on startup
       const autoSync = localStorage.getItem('utreker_auto_sync') === 'true';
       import('@/lib/googleDriveSync').then(async ({ GoogleDriveSync }) => {
@@ -61,15 +67,18 @@ function App() {
   return (
     <Router basename={import.meta.env.BASE_URL}>
       <div className="min-h-screen min-h-dvh bg-background text-text">
+        <Onboarding />
         <Navigation />
         <main className="md:pt-16">
-          <Routes>
-            <Route path="/" element={<Today />} />
-            <Route path="/habits" element={<Habits />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/insights" element={<Insights />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Today />} />
+              <Route path="/habits" element={<Habits />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/insights" element={<Insights />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
     </Router>

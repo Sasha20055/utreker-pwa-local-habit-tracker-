@@ -68,6 +68,16 @@ export function getEnergyColor(energy: number | null): string {
   return colors[energy] || 'var(--color-text-dim)';
 }
 
+// Monday-based start of the week for a given date (matches the Russian calendar)
+export function startOfWeekMonday(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0 = Sunday
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
 // Generate array of days for calendar
 export function getCalendarDays(year: number, month: number): (Date | null)[] {
   const firstDay = new Date(year, month, 1);

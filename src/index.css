@@ -46,6 +46,19 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* Light theme overrides (toggled via data-theme="light" on <html>) */
+:root[data-theme="light"] {
+  --color-background: #f6f7fb;
+  --color-surface: rgba(15, 23, 42, 0.04);
+  --color-surface-hover: rgba(15, 23, 42, 0.08);
+  --color-border: rgba(15, 23, 42, 0.12);
+  --color-border-hover: rgba(15, 23, 42, 0.22);
+
+  --color-text: rgba(15, 23, 42, 0.92);
+  --color-text-muted: rgba(15, 23, 42, 0.6);
+  --color-text-dim: rgba(15, 23, 42, 0.42);
+}
+
 /* Base styles */
 * {
   box-sizing: border-box;

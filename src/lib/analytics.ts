@@ -7,6 +7,8 @@ import type {
   ComparisonInsight,
   TextInsight,
 } from '@/types';
+import { CONFOUNDING_TAGS } from '@/types';
+import { isHabitScheduledOnDate, isHabitCompleted } from './habitSchedule';
 import { round, percentageChange } from './utils';
 
 // Calculate moving average
@@ -54,12 +56,15 @@ function extractEnergies(entries: DayEntry[]): number[] {
     .map((e) => e.energy as number);
 }
 
-// Extract habit completion for specific habit
-function extractHabitValues(entries: DayEntry[], habitId: string): number[] {
-  return entries.map((entry) => {
-    const progress = entry.habits.find((h) => h.habitId === habitId);
-    return progress ? progress.value : 0;
-  });
+// A day is confounded when a tag (illness/stress/travel) drags both state and behavior
+// down together — including it would manufacture a false correlation.
+function isConfounded(entry: DayEntry): boolean {
+  return entry.tags?.some((tag) => CONFOUNDING_TAGS.includes(tag)) ?? false;
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 // Calculate trend insight
@@ -89,45 +94,63 @@ export function calculateTrend(
   };
 }
 
-// Calculate correlation between habit and metric
+// Calculate correlation between habit and metric.
+// Trustworthiness guards: confounded days are excluded, both "done" and "not done"
+// groups must be large enough to compare, wording is associative (not causal),
+// and a confidence level reflects how much data backs the finding.
 export function calculateCorrelation(
   entries: DayEntry[],
   habit: Habit,
   metric: 'mood' | 'energy'
 ): CorrelationInsight | null {
-  // Filter entries that have both the habit tracked and the metric
-  const validEntries = entries.filter(
-    (e) =>
-      (metric === 'mood' ? e.mood !== null : e.energy !== null) &&
-      e.habits.some((h) => h.habitId === habit.id)
-  );
+  if (habit.type === 'goal') return null;
 
-  if (validEntries.length < 7) return null;
+  // Sample = days the habit is scheduled, the metric is present, and the day isn't confounded.
+  const sample = entries.filter((e) => {
+    const hasMetric = metric === 'mood' ? e.mood !== null : e.energy !== null;
+    return hasMetric && !isConfounded(e) && isHabitScheduledOnDate(habit, new Date(e.date));
+  });
 
-  const habitValues = extractHabitValues(validEntries, habit.id);
-  const metricValues =
-    metric === 'mood' ? extractMoods(validEntries) : extractEnergies(validEntries);
+  if (sample.length < 10) return null;
 
-  // For binary habits, convert to 0/1
-  const normalizedHabitValues =
-    habit.type === 'binary'
-      ? habitValues.map((v) => (v > 0 ? 1 : 0))
-      : habitValues;
+  const isDone = (e: DayEntry): boolean => {
+    const progress = e.habits.find((h) => h.habitId === habit.id);
+    return isHabitCompleted(habit, progress?.value ?? 0);
+  };
+  const metricOf = (e: DayEntry): number =>
+    metric === 'mood' ? (e.mood as number) : (e.energy as number);
 
-  const correlation = pearsonCorrelation(normalizedHabitValues, metricValues);
+  const doneDays = sample.filter(isDone);
+  const notDoneDays = sample.filter((e) => !isDone(e));
+  const sampleWith = doneDays.length;
+  const sampleWithout = notDoneDays.length;
 
-  // Only report if correlation is meaningful
+  // Need a real comparison group on both sides — otherwise the number is noise.
+  if (sampleWith < 5 || sampleWithout < 5) return null;
+
+  // Pearson over the sample (binary → 0/1, scale → raw value).
+  const habitSeries = sample.map((e) => {
+    const progress = e.habits.find((h) => h.habitId === habit.id);
+    const value = progress?.value ?? 0;
+    return habit.type === 'binary' ? (value > 0 ? 1 : 0) : value;
+  });
+  const metricSeries = sample.map(metricOf);
+  const correlation = pearsonCorrelation(habitSeries, metricSeries);
+
   if (Math.abs(correlation) < 0.3) return null;
 
-  const metricLabel = metric === 'mood' ? 'настроение' : 'энергия';
-  const impact =
-    correlation > 0.5
-      ? `Сильно улучшает ${metricLabel}`
-      : correlation > 0.3
-      ? `Улучшает ${metricLabel}`
-      : correlation < -0.5
-      ? `Сильно ухудшает ${metricLabel}`
-      : `Ухудшает ${metricLabel}`;
+  const avgWith = round(average(doneDays.map(metricOf)));
+  const avgWithout = round(average(notDoneDays.map(metricOf)));
+
+  // Confidence is limited by the smaller group.
+  const minSide = Math.min(sampleWith, sampleWithout);
+  const confidence: CorrelationInsight['confidence'] =
+    minSide >= 12 ? 'high' : minSide >= 8 ? 'medium' : 'low';
+
+  const metricLabel = metric === 'mood' ? 'настроением' : 'энергией';
+  const direction = correlation > 0 ? 'лучшим' : 'более низким';
+  const strength = Math.abs(correlation) > 0.5 ? 'Заметно чаще' : 'Чаще';
+  const impact = `${strength} совпадает с ${direction} ${metricLabel}`;
 
   return {
     type: 'correlation',
@@ -136,6 +159,11 @@ export function calculateCorrelation(
     metric,
     correlation,
     impact,
+    confidence,
+    sampleWith,
+    sampleWithout,
+    avgWith,
+    avgWithout,
   };
 }
 
@@ -202,21 +230,23 @@ export function generateTextInsights(
     }
 
     if (consecutiveSkips >= 3) {
-      // Check if mood/energy dropped
-      const recentMoods = extractMoods(recentEntries.slice(-consecutiveSkips));
+      // Compare mood, excluding confounded days so we don't blame the habit for an illness/stress dip
+      const recentMoods = extractMoods(
+        recentEntries.slice(-consecutiveSkips).filter((e) => !isConfounded(e))
+      );
       const previousMoods = extractMoods(
-        recentEntries.slice(-consecutiveSkips * 2, -consecutiveSkips)
+        recentEntries.slice(-consecutiveSkips * 2, -consecutiveSkips).filter((e) => !isConfounded(e))
       );
 
-      if (recentMoods.length > 0 && previousMoods.length > 0) {
+      if (recentMoods.length >= 2 && previousMoods.length >= 2) {
         const recentAvg = movingAverage(recentMoods, recentMoods.length);
         const previousAvg = movingAverage(previousMoods, previousMoods.length);
 
         if (previousAvg - recentAvg > 0.5) {
           insights.push({
             type: 'text',
-            category: 'negative',
-            message: `Настроение снизилось после ${consecutiveSkips} дней без "${habit.name}"`,
+            category: 'neutral',
+            message: `Настроение чаще ниже в дни без «${habit.name}». Это совпадение, не обязательно причина.`,
           });
         }
       }

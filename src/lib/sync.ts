@@ -1,5 +1,5 @@
 import { db } from './db';
-import type { DayEntry, Habit } from '@/types';
+import type { DayEntry, Habit, Tombstone } from '@/types';
 
 export interface SyncPayload {
   version: 1;
@@ -8,6 +8,7 @@ export interface SyncPayload {
     habits: Habit[];
     days: DayEntry[];
   };
+  tombstones?: Tombstone[]; // deletions to propagate (optional for backward compat)
 }
 
 // Convert date strings back to Date objects after JSON parse
@@ -30,11 +31,13 @@ function reviveDates(obj: any): any {
 export async function generateSyncPayload(): Promise<SyncPayload> {
   const habits = await db.habits.toArray();
   const days = await db.days.toArray();
+  const tombstones = await db.tombstones.toArray();
 
   return {
     version: 1,
     timestamp: new Date().toISOString(),
     data: { habits, days },
+    tombstones,
   };
 }
 
@@ -62,10 +65,32 @@ export async function mergeSyncPayload(payload: SyncPayload): Promise<void> {
 
   const remoteHabits = reviveDates(payload.data.habits) as Habit[];
   const remoteDays = reviveDates(payload.data.days) as DayEntry[];
+  const remoteTombstones = reviveDates(payload.tombstones ?? []) as Tombstone[];
 
-  await db.transaction('rw', db.habits, db.days, async () => {
-    // Merge Habits
+  await db.transaction('rw', db.habits, db.days, db.tombstones, async () => {
+    // Combine local + remote tombstones, keeping the latest deletedAt per key.
+    const localTombstones = await db.tombstones.toArray();
+    const tombMap = new Map<string, Tombstone>();
+    for (const t of [...localTombstones, ...remoteTombstones]) {
+      const existing = tombMap.get(t.key);
+      if (!existing || existing.deletedAt.getTime() < t.deletedAt.getTime()) {
+        tombMap.set(t.key, t);
+      }
+    }
+    // Persist the merged tombstones so deletions keep propagating.
+    if (tombMap.size > 0) {
+      await db.tombstones.bulkPut([...tombMap.values()]);
+    }
+
+    // A deletion wins over an incoming record only if it happened after that record's last edit.
+    const isTombstoned = (type: Tombstone['type'], id: string, updatedAt?: Date): boolean => {
+      const t = tombMap.get(`${type}:${id}`);
+      return t ? t.deletedAt.getTime() >= (updatedAt?.getTime() ?? 0) : false;
+    };
+
+    // Merge Habits (skip ones a newer tombstone has deleted)
     for (const remoteHabit of remoteHabits) {
+      if (isTombstoned('habit', remoteHabit.id, remoteHabit.updatedAt)) continue;
       const localHabit = await db.habits.get(remoteHabit.id);
       if (!localHabit) {
         await db.habits.add(remoteHabit);
@@ -78,8 +103,9 @@ export async function mergeSyncPayload(payload: SyncPayload): Promise<void> {
       }
     }
 
-    // Merge Days
+    // Merge Days (skip ones a newer tombstone has deleted)
     for (const remoteDay of remoteDays) {
+      if (isTombstoned('day', remoteDay.id, remoteDay.updatedAt)) continue;
       const localDay = await db.days.get(remoteDay.id);
       if (!localDay) {
         await db.days.add(remoteDay);
@@ -88,6 +114,21 @@ export async function mergeSyncPayload(payload: SyncPayload): Promise<void> {
         const remoteUpdate = remoteDay.updatedAt?.getTime() || 0;
         if (remoteUpdate > localUpdate) {
           await db.days.put(remoteDay);
+        }
+      }
+    }
+
+    // Apply tombstones to local records that haven't been edited since the deletion.
+    for (const t of tombMap.values()) {
+      if (t.type === 'habit') {
+        const local = await db.habits.get(t.entityId);
+        if (local && (local.updatedAt?.getTime() ?? 0) <= t.deletedAt.getTime()) {
+          await db.habits.delete(t.entityId);
+        }
+      } else {
+        const local = await db.days.get(t.entityId);
+        if (local && (local.updatedAt?.getTime() ?? 0) <= t.deletedAt.getTime()) {
+          await db.days.delete(t.entityId);
         }
       }
     }

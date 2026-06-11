@@ -58,6 +58,15 @@ export default defineConfig(() => {
               form_factor: 'wide',
               label: 'utreker — трекер привычек и настроения'
             }
+          ],
+          shortcuts: [
+            {
+              name: 'Записать день',
+              short_name: 'Записать',
+              description: 'Быстро отметить настроение, энергию и привычки',
+              url: base,
+              icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
+            }
           ]
         },
         workbox: {

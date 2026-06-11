@@ -43,27 +43,66 @@ function TrendCard({ insight }: { insight: TrendInsight }) {
   );
 }
 
+const CONFIDENCE_META: Record<CorrelationInsight['confidence'], { label: string; className: string }> = {
+  high: { label: 'высокая уверенность', className: 'bg-green-500/15 text-green-400' },
+  medium: { label: 'средняя уверенность', className: 'bg-yellow-500/15 text-yellow-400' },
+  low: { label: 'мало данных', className: 'bg-surface text-text-muted' },
+};
+
 function CorrelationCard({ insight }: { insight: CorrelationInsight }) {
+  const [expanded, setExpanded] = useState(false);
   const isPositive = insight.correlation > 0;
+  const metricLabel = insight.metric === 'mood' ? 'настроение' : 'энергия';
+  const confidence = CONFIDENCE_META[insight.confidence];
 
   return (
     <Card>
       <CardContent>
-        <div className="flex items-start gap-3">
-          <div className={cn(
-            'w-10 h-10 rounded-full flex items-center justify-center text-xl',
-            isPositive ? 'bg-green-500/20' : 'bg-red-500/20'
-          )}>
-            {isPositive ? '\u{1F4C8}' : '\u{1F4C9}'}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full text-left"
+          aria-expanded={expanded}
+        >
+          <div className="flex items-start gap-3">
+            <div className={cn(
+              'w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0',
+              isPositive ? 'bg-green-500/20' : 'bg-red-500/20'
+            )}>
+              {isPositive ? '\u{1F4C8}' : '\u{1F4C9}'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-text font-medium">{insight.habitName}</p>
+                <span className={cn('text-[10px] px-2 py-0.5 rounded-full', confidence.className)}>
+                  {confidence.label}
+                </span>
+              </div>
+              <p className="text-text-muted text-sm">{insight.impact}</p>
+              <p className="text-text-dim text-xs mt-1">
+                Связь: {Math.abs(insight.correlation * 100).toFixed(0)}% · {insight.sampleWith}/{insight.sampleWithout} дней с/без · нажмите для деталей
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-text font-medium">{insight.habitName}</p>
-            <p className="text-text-muted text-sm">{insight.impact}</p>
-            <p className="text-text-dim text-xs mt-1">
-              Корреляция: {(insight.correlation * 100).toFixed(0)}%
+        </button>
+
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-2 text-center">
+            <div className="glass rounded-xl p-2">
+              <div className="text-xs text-text-muted">С привычкой</div>
+              <div className="text-lg font-bold text-text">{insight.avgWith.toFixed(1)}</div>
+              <div className="text-[10px] text-text-dim">{metricLabel}, {insight.sampleWith} дн.</div>
+            </div>
+            <div className="glass rounded-xl p-2">
+              <div className="text-xs text-text-muted">Без привычки</div>
+              <div className="text-lg font-bold text-text">{insight.avgWithout.toFixed(1)}</div>
+              <div className="text-[10px] text-text-dim">{metricLabel}, {insight.sampleWithout} дн.</div>
+            </div>
+            <p className="col-span-2 text-[11px] text-text-dim">
+              Дни с тегами болезни, стресса и поездок исключены из расчёта, чтобы не искажать связь.
             </p>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -160,6 +199,7 @@ export function Insights() {
   const correlations = useMemo(() => insights.filter((i): i is CorrelationInsight => i.type === 'correlation'), [insights]);
   const comparisons = useMemo(() => insights.filter((i): i is ComparisonInsight => i.type === 'comparison'), [insights]);
   const texts = useMemo(() => insights.filter((i): i is TextInsight => i.type === 'text'), [insights]);
+  const hasRealInsights = trends.length > 0 || correlations.length > 0 || comparisons.length > 0;
 
   if (isLoading) {
     return (
@@ -224,18 +264,44 @@ export function Insights() {
         </section>
       )}
 
-      {/* Empty state */}
-      {insights.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-4xl mb-4">{'\u{1F4CA}'}</p>
-            <p className="text-text font-medium mb-2">Пока недостаточно данных</p>
-            <p className="text-text-muted text-sm">
-              Продолжайте трекать настроение и привычки.
-              Инсайты появятся после 7+ дней.
-            </p>
-          </CardContent>
-        </Card>
+      {/* Rich empty state: show what insights will look like before there's enough data */}
+      {!hasRealInsights && (
+        <section className="space-y-4 xl:max-w-3xl">
+          <Card>
+            <CardContent className="py-6 text-center space-y-2">
+              <p className="text-4xl">{'\u{1F4CA}'}</p>
+              <p className="text-text font-medium">Инсайты появятся после 7+ дней</p>
+              <p className="text-text-muted text-sm">
+                Отмечайте настроение, энергию и привычки — и приложение само найдёт закономерности.
+                Дни с тегами болезни, стресса и поездок исключаются, чтобы связи были честными.
+              </p>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-2">
+            <p className="text-xs text-text-dim uppercase tracking-wide">Так это будет выглядеть</p>
+            <div className="relative opacity-70">
+              <span className="absolute -top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full bg-surface text-text-muted">
+                пример
+              </span>
+              <CorrelationCard
+                insight={{
+                  type: 'correlation',
+                  habitId: 'sample',
+                  habitName: 'Спорт',
+                  metric: 'mood',
+                  correlation: 0.58,
+                  impact: 'Заметно чаще совпадает с лучшим настроением',
+                  confidence: 'high',
+                  sampleWith: 14,
+                  sampleWithout: 9,
+                  avgWith: 4.1,
+                  avgWithout: 3.2,
+                }}
+              />
+            </div>
+          </div>
+        </section>
       )}
     </div>
   );
